@@ -11,6 +11,28 @@ gc.set_threshold(1000)  # Adjust garbage collection frequency
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Function to configure logger for specific table
+def configure_logger(table_name, base_dir):
+    logger = logging.getLogger(table_name)  # Unique logger per table
+    logger.handlers.clear()  # Clear existing handlers to avoid duplicates
+    logger.setLevel(logging.INFO)
+
+    log_dir = Path(base_dir) / 'logs'
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / f'{table_name}.log'
+
+    # Create and configure handlers
+    file_handler = logging.FileHandler(log_file, mode='a')  # Append mode
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+    return logger
 
 def clean_dataframe(df, table_name, engine):
     # Define problematic characters to replace with space
@@ -33,7 +55,10 @@ def ingest_clients_2(config_path, date_str):
     DB_NAME = config['DATABASE']['DB_NAME']
     DB_URL = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     BASE_DIR = Path(config['PATHS']['BASE_DIR'])
-    
+
+    # Configure logger for clients
+    logger = configure_logger('clients', BASE_DIR)
+
     column_mappings = {
         'Name': 'full_name',
         'Email Address': 'email_address',
@@ -53,7 +78,7 @@ def ingest_clients_2(config_path, date_str):
     if file.exists():
         try:
             # Read the tab-separated CSV file
-            df = pd.read_csv(file, sep='\t', dtype=str, escapechar='\\')
+            df = pd.read_csv(file, sep=',', dtype=str, escapechar='\\')
             logger.info(f"Read {file} with {len(df)} rows")
 
             # Create df_unique (unique full_name, first occurrence) and df_dup (all duplicates)
@@ -105,7 +130,10 @@ def ingest_est_inv(table_name, config_path, date_str):
     DB_NAME = config['DATABASE']['DB_NAME']
     DB_URL = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     BASE_DIR = Path(config['PATHS']['BASE_DIR'])
-    
+
+    # Configure logger for table_name
+    logger = configure_logger(table_name, BASE_DIR)
+
     column_mappings = {
         'estimates': {
             'Estimate #': 'estimate_number',
@@ -133,7 +161,8 @@ def ingest_est_inv(table_name, config_path, date_str):
     logger.info(f"Found {len(files)} CSV files for {table_name}")
     for file in files:
         print(f"Ingesting file: {file}")
-        df = pd.read_csv(file, dtype=str)
+        df = pd.read_csv(file, sep=',', dtype=str)
+        logger.info(f"mishoo: {df.head()}")
         df = df.rename(columns=column_mappings[table_name])
         current_time = datetime.now()
 
@@ -146,6 +175,9 @@ def ingest_est_inv(table_name, config_path, date_str):
         for col in required_columns[table_name]:
             if col not in df.columns:
                 df[col] = None
+
+        # Clean dataframe before checking for missing clients
+        df = clean_dataframe(df, table_name, engine)
 
         # Set ingested_time from date_str
         ingested_time = pd.to_datetime(date_str, format='%Y_%m_%d')
@@ -170,14 +202,27 @@ def ingest_est_inv(table_name, config_path, date_str):
                 new_clients = clean_dataframe(new_clients, table_name, engine)
                 new_clients.to_sql('clients', engine, if_exists='append', index=False, method='multi')
 
-        # Drop rows with null or empty full_name to avoid foreign key violation
+        # Drop rows with null or empty full_name and log dropped rows
         initial_rows = len(df)
+        dropped_rows = df[df['full_name'].isnull() | (df['full_name'].str.strip() == '')]
         df = df[df['full_name'].notnull() & (df['full_name'].str.strip() != '')]
-        if len(df) < initial_rows:
-            logger.warning(f"Dropped {initial_rows - len(df)} {table_name} rows with null or empty full_name from {file}!")
+        dropped_count = initial_rows - len(df)
+        if dropped_count > 0:
+            logger.warning(
+                f"Dropped {dropped_count} {table_name} rows with null or empty full_name from {file}:")
+            # Log the full data of dropped rows
+            for _, row in dropped_rows.iterrows():
+                logger.warning(f"Dropped row: {row.to_dict()}")
+
         df = clean_dataframe(df, table_name, engine)
-        df.to_sql(table_name, engine, if_exists='append', index=False, method='multi')
-        logger.info(f"Ingested {file} into {table_name}")
+
+        try:
+            df.to_sql(table_name, engine, if_exists='append', index=False, method='multi')
+            logger.info(f"Ingested {file} into {table_name}")
+        except Exception as e:
+            logger.error(f"Failed to write {file} to {table_name}: {str(e)}")
+            continue
+
     engine.dispose()
 
 if __name__ == '__main__':
@@ -187,6 +232,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # ingest_clients_2(args.config, args.date)
-    ingest_est_inv("estimates", args.config, args.date)
-    #ingest_est_inv("invoices", args.config, args.date)
-    
+    # ingest_est_inv("estimates", args.config, args.date)
+    ingest_est_inv("invoices", args.config, args.date)
