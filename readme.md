@@ -1,11 +1,14 @@
 # CRM Introduction 
 
-Read this in order to use CRM utils to export joist data into CreativeFloors local database
-Until Joist is going to implement an api data export is done manually:
+Read this in order to use CRM utils to export joist data into CreativeFloors local database pgAdmin.
+Until Joist is going to implement an api, data export is done manually and is both full and incremental.
 
 1. Estimates - incremental, by month
 2. Clients - full always
 3. Invoices - incremental, by month
+
+For a full export of estimates or invoices, you get a file for each month (5years * 12 months =  a lot of clicks)
+For clients there is no incremental, you get the clients of all time.
 
 ---
 
