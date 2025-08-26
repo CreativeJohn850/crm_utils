@@ -1,13 +1,26 @@
-# All Markdown Notation
+# CRM Introduction 
 
-This is a sample document that shows all the common Markdown notation.
+Read this in order to use CRM utils to export joist data into CreativeFloors local database
+Until Joist is going to implement an api data export is done manually:
+
+1. Estimates - incremental, by month
+2. Clients - full always
+3. Invoices - incremental, by month
 
 ---
 
-## 1. Headings
+## 1. Order of export
 
-# H1 Heading
-## H2 Heading
+Export is done manually for each of the 3 types of data objects in joist. The order does not matter
+
+## 2. Order of import/ingestion
+
+Due to the lack of entry data validation, data usually contains a lot of mistakes and duplicates. 
+Each update of the client data on the estimate document creates a new user in the clients table.
+For this reason the ingestion must respect the order specified in the **Introduction**.
+
+Estimates are exported by month, ingested first using the script called 1_ingest_estimates.py
+
 ### H3 Heading
 #### H4 Heading
 ##### H5 Heading
