@@ -16,13 +16,14 @@ Export is done manually for each of the 3 types of data objects in joist. The or
 ## 2. Order of import/ingestion
 
 Due to the lack of entry data validation, data usually contains a lot of mistakes and duplicates. 
-Each update of the client data on the estimate document creates a new user in the clients table.
-For this reason the ingestion must respect the order specified in the **Introduction**.
+Estimates and Invoices are exported by month. Invoices use tab as separator.
 
-Estimates are exported by month, ingested first using the script called 1_ingest_estimates.py
 
-### H3 Heading
-#### H4 Heading
+## 3. How to run the ingestor [incremental]
+
+Incremental means that the estimator expects the database and tables to exist and contain some data.
+
+## 4. How to run the ingestor full [first time]
 ##### H5 Heading
 ###### H6 Heading
 
