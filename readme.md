@@ -7,7 +7,7 @@ Until Joist is going to implement an api, data export is done manually and is bo
 2. Clients - full always
 3. Invoices - incremental, by month
 
-For a full export of estimates or invoices, you get a file for each month (5years * 12 months =  a lot of clicks)
+For a full export of estimates or invoices, you get a file for each month (5years * 12 months =  a lot of clicks).
 For clients there is no incremental, you get the clients of all time.
 
 ---
@@ -20,6 +20,11 @@ Export is done manually for each of the 3 types of data objects in joist. The or
 
 Due to the lack of entry data validation, data usually contains a lot of mistakes and duplicates. 
 Estimates and Invoices are exported by month. Invoices use tab as separator.
+Either intentional, bug or misuse of the Joist platform, the clients usually arrive with duplicates names, 
+but different values for the fields. In order to take "the last version" of a client we take tha max value of the joist_client_id field.
+It means it was created later, so it contains the last version. We use the joist id because we actually do not have a date of creation for the user.
+In the case of new clients, this version of the ingester ads the creation date of the first estimate as the join_date of the user.
+Name and email_address suffer most of the corrections.
 
 
 ## 3. How to run the ingestor [incremental]
@@ -32,6 +37,8 @@ The order of execution in main is,
 1. Clients [uses estimates to add to clients only those who have an estimate]
 2. Estimates [requires the full_name to already exist in clients table: FK]
 3. Invoices  [requires the full_name to already exist in clients table: FK]
+
+
 
 ### 3.1 Execution 
 Before executing the script, make sure the 3 csv files are present in /data/{folders}
