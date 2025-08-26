@@ -22,9 +22,34 @@ Estimates and Invoices are exported by month. Invoices use tab as separator.
 ## 3. How to run the ingestor [incremental]
 
 Incremental means that the estimator expects the database and tables to exist and contain some data.
+1. all_ingestor.py      --> main: to be executed
+2. ingest_data.py       --> util functions called by the all_ingestor.py
+
+The order of execution in main is, 
+1. Clients [uses estimates to add to clients only those who have an estimate]
+2. Estimates [requires the full_name to already exist in clients table: FK]
+3. Invoices  [requires the full_name to already exist in clients table: FK]
+
+### 3.1 Execution 
+Before executing the script, make sure the 3 csv files are present in /data/{folders}
+folders: clients, estimates, invoices with the corresponding names
+
+Configure the c_month variable with the month to be ingested and the date of the execution: ingestion_date_str
+
+Logger might work, in logs/old you have sample logs for the full ingester 
+
+### 3.2 Cleaner for string columns
+
+For all the entities, there is a method clean_df_cols that receives 2 parameters and returns a clean dataframe.
+First: dataframe to be cleaned
+Second: a python list of columns to be cleaned, each element of the list is a string. 
+This was configured for the column full_name of estimates and invoices and for all the rest of the string columns of clients. 
+
+This method replaces problematic characters with space, also strips the spaces before the value and after the value.
+It does happen, and that's the reason the strip is there. 
 
 ## 4. How to run the ingestor full [first time]
-##### H5 Heading
+##### Pending review and documentation
 ###### H6 Heading
 
 ---
