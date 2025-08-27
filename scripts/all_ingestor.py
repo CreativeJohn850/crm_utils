@@ -26,19 +26,36 @@ from pathlib import Path
 import configparser
 import time
 
-def configure_logger(name, base_dir):
-    logger = logging.getLogger(name)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Function to configure logger for specific table
+def configure_logger(table_name, base_dir):
+    logger = logging.getLogger(table_name)  # Unique logger per table
+    logger.handlers.clear()  # Clear existing handlers to avoid duplicates
     logger.setLevel(logging.INFO)
-    handler = logging.FileHandler(base_dir / f"{name}.log")
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+
+    log_dir = Path(base_dir) / 'logs'
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / f'{table_name}.log'
+
+    # Create and configure handlers
+    file_handler = logging.FileHandler(log_file, mode='a')  # Append mode
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
     return logger
 
 if __name__ == '__main__':
     c_month = '7'  # current ingestion month
     config_file_path = 'config.ini'
-    ingestion_date_str = '2025-08-26'
+    ingestion_date_str = '2025-08-26' # date of the ingestion/execution
     ingestion_date = datetime.strptime(ingestion_date_str, '%Y-%m-%d').date()
 
     # Load configuration to get BASE_DIR
